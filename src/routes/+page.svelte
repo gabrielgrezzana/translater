@@ -6,33 +6,53 @@
   let inputText = "";
   let translatedText = "Translated text will appear here";
   let isLoading = false;
+  let callfn = '';
+  const customPrompt = `
+Imagine that you are an English teacher, with many years of experience, and you love what you do, which is teaching English to the rest of the world. Your student, Gabriel, whenever he is in trouble or has problems, calls you, asking for the translation of a word, or speaking words in Portuguese, so that you can organize the exact sequence of a native English speaker and you simply respond to Gabriel with the translation of what he asked for, without any fuss, without any more random words, just send the correct sequence and the words he asked for.
+Gabriel sent the phrase or words:`;
 
   $: if(choise === "simple") {
     console.log("simple");
+    callfn = "translate_simple";
   } else if(choise === "compose") {
     console.log("compose");
+    callfn = "translate_with_custom_prompt";
   }
 
   async function handleTranslate() {
-    if (!inputText.trim()) {
-      alert("Please enter some text to translate");
-      return;
-    }
-
-    isLoading = true;
-    try {
-      const result = await invoke("translate_text", { 
-        text: inputText, 
-        mode: choise 
-      });
-      translatedText = result as string;
-    } catch (error) {
-      console.error("Translation error:", error);
-      translatedText = "Error occurred during translation";
-    } finally {
-      isLoading = false;
-    }
+  if (!inputText.trim()) {
+    alert("Please enter some text to translate");
+    return;
   }
+
+  isLoading = true;
+
+  try {
+    let result : any;
+    
+    if (choise === "simple") {
+      // Chama função simples (se existir)
+      result = await invoke("translate_simple", {
+        text: inputText
+      });
+    } else {
+      // Chama função com prompt customizado  
+      result = await invoke("translate_with_custom_prompt", {
+        text: inputText,
+        customScript: customPrompt  // <- Nome correto do parâmetro
+      });
+    }
+    
+    const parseResult = JSON.parse(result);
+
+    translatedText = parseResult.choices[0].message.content;
+  } catch (error: any) {
+    console.log(error);
+    alert("Translation failed: " + error);
+  } finally {
+    isLoading = false;
+  }
+}
 </script>
 
 <main class="container">  

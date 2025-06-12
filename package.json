@@ -21,6 +21,7 @@
         "@tanstack/react-query": "^5.80.7",
         "@tauri-apps/api": "^2",
         "@tauri-apps/plugin-opener": "^2",
+        "dotenv": "^16.5.0",
         "framer-motion": "^12.17.2"
     },
     "devDependencies": {
