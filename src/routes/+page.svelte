@@ -1,99 +1,126 @@
 <script lang="ts">	
-	
-  import { invoke } from "@tauri-apps/api/core";
+  
+  import { invoke } from '@tauri-apps/api/core';
+  import handleTranslate from './handle.translate';
+
   
   let choise = "simple";
   let inputText = "";
   let translatedText = "Translated text will appear here";
   let isLoading = false;
-  let callfn = '';
-  const customPrompt = `
-Imagine that you are an English teacher, with many years of experience, and you love what you do, which is teaching English to the rest of the world. Your student, Gabriel, whenever he is in trouble or has problems, calls you, asking for the translation of a word, or speaking words in Portuguese, so that you can organize the exact sequence of a native English speaker and you simply respond to Gabriel with the translation of what he asked for, without any fuss, without any more random words, just send the correct sequence and the words he asked for.
-Gabriel sent the phrase or words:`;
-
-  $: if(choise === "simple") {
-    console.log("simple");
-    callfn = "translate_simple";
-  } else if(choise === "compose") {
-    console.log("compose");
-    callfn = "translate_with_custom_prompt";
-  }
-
-  async function handleTranslate() {
-  if (!inputText.trim()) {
-    alert("Please enter some text to translate");
-    return;
-  }
-
-  isLoading = true;
-
+  
+  let isTauriAvailable = false;
+  
+  // Check if Tauri is available
   try {
-    let result : any;
-    
-    if (choise === "simple") {
-      // Chama função simples (se existir)
-      result = await invoke("translate_simple", {
-        text: inputText
-      });
-    } else {
-      // Chama função com prompt customizado  
-      result = await invoke("translate_with_custom_prompt", {
-        text: inputText,
-        customScript: customPrompt  // <- Nome correto do parâmetro
-      });
-    }
-    
-    const parseResult = JSON.parse(result);
+    isTauriAvailable = typeof invoke === 'function';
+  } catch {
+    isTauriAvailable = false;
+  }
 
-    translatedText = parseResult.choices[0].message.content;
-  } catch (error: any) {
-    console.log(error);
-    alert("Translation failed: " + error);
+
+  // Function to switch translation mode
+  function setTranslationMode(mode: string) {
+    choise = mode;
+    console.log(`Mode changed to: ${mode}`);
+  }
+
+  // MOCK function for browser testing
+  async function mockTranslation(text: string, mode: string): Promise<string> {
+    // Simulates API delay
+    await new Promise(resolve => setTimeout(resolve, 1500));
+    
+    if (mode === "simple") {
+      return `[MOCK] Simple translation of: "${text}"`;
+    } else {
+      return `[MOCK] Compose translation of: "${text}" - As an English teacher, I would say this translates to: [translated version]`;
+    }
+  }
+
+  // Main translation function
+  
+
+  async function translate() {
+  if (!inputText.trim()) return;
+  
+  isLoading = true;
+  try {
+    translatedText = await handleTranslate({
+      inputText, 
+      choise, 
+      isTauriAvailable,
+      isLoading,
+      translatedText: ""
+    });
+  } catch (error) {
+    translatedText = "Translation error occurred";
   } finally {
     isLoading = false;
   }
 }
+
+
+
+
+
+// Function to handle Enter in textarea
+async function handleKeydown(event: KeyboardEvent) {
+  if (event.key === 'Enter' && !event.shiftKey) {
+    event.preventDefault();
+    await translate();
+  }
+}
+
 </script>
 
 <main class="container">  
-  <div class="translate-container">
-    <h2 class="translate-title">TRANSLATE</h2>    
-    <div class="choise-buttons-translate">
-      <button 
-        class="simple-btn" 
-        class:active={choise === "simple"} 
-        on:click={() => choise = "simple"}
-      >
-        Simple translate
-      </button>
-      <button 
-        class="compose-btn" 
-        class:active={choise === "compose"} 
-        on:click={() => choise = "compose"}
-      >
-        Compose translate
-      </button>
-    </div>
-    
-    <textarea 
-      class="input-text" 
-      placeholder="Enter text to translate"
-      bind:value={inputText}
-    ></textarea>     
-    
+  <div class="container-title">
+    <h2 class="translate-title">TRANSLATE</h2>
+  </div>
+  
+  <div class="container-buttons">
     <button 
-      on:click={handleTranslate}
+      class:active={choise === 'simple'}
+      on:click={() => setTranslationMode('simple')}
       disabled={isLoading}
     >
-      {isLoading ? "Translating..." : "Translate"}
+      Simple
     </button>
-    
-    <p>{translatedText}</p>
+    <button 
+      class:active={choise === 'compose'}
+      on:click={() => setTranslationMode('compose')}
+      disabled={isLoading}
+    >
+      Compose
+    </button>
+  </div>
+  
+  <div class="container-input">
+    <textarea 
+      class="input-text" 
+      placeholder="Enter text to translate" 
+      bind:value={inputText}
+      on:keydown={handleKeydown}
+      disabled={isLoading}
+    ></textarea>
+  </div>
+  
+  <div class="container-translate-button">
+    <button 
+      class="translate-button"
+      on:click={translate}
+      disabled={isLoading || !inputText.trim()}
+    >
+      {isLoading ? 'Translating...' : 'Translate'}
+    </button>
+  </div>
+  
+  <div class="container-output">
+    <p class:loading={isLoading}>{translatedText}</p>
   </div>
 </main>
 
 <style>
-/* Reset TOTAL - zera absolutamente tudo */
 :global(*) {
   margin: 0 !important;
   padding: 0 !important;
@@ -117,140 +144,175 @@ Gabriel sent the phrase or words:`;
   background: #000 !important;
 }
 
-.choise-buttons-translate button {
-  width: 150px;
-  height: 30px;  
+.container {
+  flex: 1;
+  display: flex;  
+  background: #323131;
+  width: 100%;
+  height: 100%;    
+  flex-direction: column;
+  
+}
+
+.container-title {
+  width: 100%;
+  height: 10%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.translate-title {
   color: #fff;
-  background: #555;
-  border: 2px solid #666;
-  border-radius: 5px;
-  cursor: pointer;
+  font-size: 24px;
+  margin: 0;
+  box-shadow: 0 0 10px 0 #15b6d6e2;
+  width: 40%;  
+  border-radius: 10px;
+  height: 3rem;  
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.container-buttons {
+  width: 100%;
+  height: 8%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;  
+}
+
+.container-buttons button {
+  width: 7rem;
+  height: 2rem;
+  border-radius: 10px;
+  background-color: #15b6d6e2;
+  font-size: 1rem;
+  font-weight: bold;
+  box-shadow: 0 0 20px 0 #15b6d6e2;
   transition: all 0.3s ease;
 }
 
-.simple-btn.active {
-  border-color: #007bff;
-  background: #007bff20;
-  color: #007bff;
-  box-shadow: 0 0 10px #007bff50;
-}
-
-.compose-btn.active {
-  border-color: #28a745;
-  background: #28a74520;
-  color: #28a745;
-  box-shadow: 0 0 10px #28a74550;
-}
-
-.choise-buttons-translate {
-  width: 100%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 10px;
-}
-
-.choise-buttons-translate button {
-  width: 150px;
-  height: 30px;  
-  color: #000;
-  border: 2px solid #fff;
-}
-
-.choise-buttons-translate button.active {
-  border-color: #007bff;
-}
-
-.container {
-  width: 100vw;
-  height: 100vh;
-  margin: 0;
-  padding: 0;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  background: #000;
-}
-
-.translate-container {
-  background: #333;
-  padding: 40px;
-  border-radius: 10px;
-  color: white;
-  display: flex;
-  flex-direction: column;
-  gap: 20px;
-  min-width: 400px;
-  min-height: 500px;
-  align-items: center;
-  justify-content: space-around;
-}
-
-.input-text {
-  min-width: 250px;
-  min-height: 100px;
-  background-color: #555;
-  color: #fff;
-  border-radius: 10px;
-  border: 2px solid #fff;  
-  font-size: 16px;
-  font-family: inherit;
-  padding: 20px;
-  resize: vertical;
-  overflow-y: auto;
-  text-align: center;  
-  align-items: center;
-  justify-content: center;
-  display: flex;
-}
-
-.translate-container h2 {
-  color: white;
-  font-size: 24px;
-  margin: 0;
-  box-shadow: 0 0 10px 0 #fff;
-  border-radius: 10px;
-  width: 200px;
-  height: 50px;
-  text-align: center;
-  justify-content: center;
-  align-items: center;
-  display: flex;
-}
-
-
-
-
-.translate-container button {
-  background: #007bff;
-  color: white;
-  border: none;
-  border-radius: 5px;
-  font-size: 16px;
+.container-buttons button:hover:not(:disabled) {
   cursor: pointer;
-  min-width: 100px;
-  max-width: 150px;
-  min-height: 30px;
-  max-height: 50px;
-
+  color: #fff;
+  box-shadow: 0 0 20px 0 #fff;
 }
 
-.translate-container button:hover {
-  background: #0056b3;
+.container-buttons button:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
 }
 
-.translate-container p {
-  background: #222;
-  padding: 15px;
-  border-radius: 5px;
-  color: #ccc;
-  min-height: 50px;
-  text-align: center;
-  justify-content: center;
-  align-items: center;
+.container-buttons button.active {
+  background-color: #fff;
+  color: #323131;
+  box-shadow: 0 0 25px 0 #fff;
+}
+
+.container-input {
+  width: 100%;
+  height: 35%;
   display: flex;
+  align-items: center;
+  justify-content: center;  
+}
+
+.container-input textarea {
   width: 90%;
-  min-height: 50px;
-  max-height: 100px;
+  height: 80%;
+  background: #0d313ef6;
+  border-radius: 10px;
+  border: 2px solid #fff;
+  font-size: 1rem;
+  font-weight: bold;
+  padding: 15px;
+  color: #fff;
+  border-color: #fff;
+  box-shadow: 0 0 15px 0 #15b6d6e2;
+  resize: none;
+  min-width: 200px;
+  max-width: 90%;
+  min-height: 100px;
+  max-height: 250px;
+}
+
+.container-input textarea:disabled {
+  opacity: 0.7;
+  cursor: not-allowed;
+}
+
+.container-input textarea::placeholder {
+  color: #bbb;
+  text-align: center;
+}
+
+.container-translate-button {
+  width: 100%;
+  height: 8%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.translate-button {
+  width: 10rem;
+  height: 2.5rem;
+  border-radius: 10px;
+  background-color: #14d7a7e2;
+  font-size: 1.1rem;
+  font-weight: bold;
+  color: #fff;
+  box-shadow: 0 0 20px 0 #14d7a7e2;
+  transition: all 0.3s ease;
+}
+
+.translate-button:hover:not(:disabled) {
+  cursor: pointer;
+  box-shadow: 0 0 25px 0 #14d7a7;
+  transform: translateY(-2px);
+}
+
+.translate-button:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+  transform: none;
+}
+
+.container-output {
+  align-self: center;
+  width: 95%;
+  height: 30%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #1f1f1f;
+  border-radius: 10px;
+  box-shadow: 0 0 15px 0 #14d7a7e2;
+  color: #fff;
+  font-size: 1.2rem;
+  font-weight: bold;
+  text-align: center;
+  padding: 20px;
+  min-width: 200px;
+  max-width: 90%;
+  overflow-y: auto;
+}
+
+.container-output p {
+  word-wrap: break-word;
+  line-height: 1.4;
+}
+
+.container-output p.loading {
+  opacity: 0.7;
+  animation: pulse 2s infinite;
+}
+
+@keyframes pulse {
+  0%, 100% { opacity: 0.7; }
+  50% { opacity: 1; }
 }
 </style>
