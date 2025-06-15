@@ -1,5 +1,6 @@
 import { invoke } from "@tauri-apps/api/core";
-import customPrompt from "../routes/script";
+import customPrompt from "./script_en";
+import customPromptSp from "./script_es";
 
 interface Props {
     inputText: string;
@@ -7,9 +8,10 @@ interface Props {
     isTauriAvailable: boolean;
     isLoading: boolean;
     translatedText: string;
+    language: 'es' | 'en';
 }
 
-async function handleTranslate({inputText, choise, isTauriAvailable, isLoading, translatedText}: Props): Promise<string> {
+async function handleTranslate({inputText, choise, isTauriAvailable, isLoading, language, translatedText}: Props): Promise<string> {
     if (!inputText.trim()) {
       alert("Please enter some text to translate");
       return "";
@@ -49,7 +51,7 @@ async function handleTranslate({inputText, choise, isTauriAvailable, isLoading, 
         
         result = await invoke("translate_with_custom_prompt", {
           text: inputText,
-          customScript: customPrompt
+          customScript: language === "es" ? customPromptSp : customPrompt
         });
         
         

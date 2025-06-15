@@ -2,12 +2,14 @@
   
   import { invoke } from '@tauri-apps/api/core';
   import handleTranslate from './handle.translate';
+  import type { TranslateOptions } from './types';
 
   
   let choise = "simple";
   let inputText = "";
   let translatedText = "Translated text will appear here";
   let isLoading = false;
+  let language: TranslateOptions = {language: "en"};
   
   let isTauriAvailable = false;
   
@@ -50,6 +52,7 @@
       choise, 
       isTauriAvailable,
       isLoading,
+      language: language.language,
       translatedText: ""
     });
   } catch (error) {
@@ -93,6 +96,10 @@ async function handleKeydown(event: KeyboardEvent) {
     >
       Compose
     </button>
+    <select class="language-select" bind:value={language.language}>
+      <option value="en">English</option>
+      <option value="es">Spanish</option>
+    </select>
   </div>
   
   <div class="container-input">
@@ -165,8 +172,7 @@ async function handleKeydown(event: KeyboardEvent) {
 .translate-title {
   color: #fff;
   font-size: 24px;
-  margin: 0;
-  box-shadow: 0 0 10px 0 #15b6d6e2;
+  margin: 0;  
   width: 40%;  
   border-radius: 10px;
   height: 3rem;  
@@ -228,7 +234,6 @@ async function handleKeydown(event: KeyboardEvent) {
   border: 2px solid #fff;
   font-size: 1rem;
   font-weight: bold;
-  padding: 15px;
   color: #fff;
   border-color: #fff;
   box-shadow: 0 0 15px 0 #15b6d6e2;
@@ -237,6 +242,9 @@ async function handleKeydown(event: KeyboardEvent) {
   max-width: 90%;
   min-height: 100px;
   max-height: 250px;
+  text-align: center;
+  align-items: center;
+  justify-content: center;
 }
 
 .container-input textarea:disabled {
@@ -309,6 +317,16 @@ async function handleKeydown(event: KeyboardEvent) {
 .container-output p.loading {
   opacity: 0.7;
   animation: pulse 2s infinite;
+}
+
+.language-select {
+  width: 10rem;
+  height: 2rem;
+  border-radius: 10px;
+  background-color: #14d7a7e2;
+  font-size: 1.1rem;
+  font-weight: bold;
+  color: #fff;
 }
 
 @keyframes pulse {
