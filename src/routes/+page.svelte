@@ -82,6 +82,7 @@
     <select class="language-select" bind:value={language.language}>
       <option value="en">English</option>
       <option value="es">Spanish</option>
+      <option value="pt">Portuguese</option>
     </select>
   </div>
 

@@ -1,13 +1,11 @@
 // Prevent additional console window on Windows in release, DO NOT REMOVE!!
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
 
+//use dotenv::dotenv;
 use reqwest;
-use serde_json::Value;
 use serde::{Deserialize, Serialize};
-use dotenv::dotenv;
+use serde_json::Value;
 use std::env;
-
-
 
 #[derive(Serialize)]
 struct GroqRequest {
@@ -25,16 +23,14 @@ struct Message {
 #[tauri::command]
 async fn translate_simple(text: &str) -> Result<String, String> {
     let url = format!(
-        "https://translate.googleapis.com/translate_a/single?client=gtx&sl=pt&tl=en&dt=t&q={}", 
+        "https://translate.googleapis.com/translate_a/single?client=gtx&sl=auto&tl=en&dt=t&q={}",
         urlencoding::encode(text)
     );
-    
-    let response = reqwest::get(&url).await
-        .map_err(|e| e.to_string())?;
-    
-    let json: Value = response.json().await
-        .map_err(|e| e.to_string())?;
-    
+
+    let response = reqwest::get(&url).await.map_err(|e| e.to_string())?;
+
+    let json: Value = response.json().await.map_err(|e| e.to_string())?;
+
     if let Some(translation) = json[0][0][0].as_str() {
         Ok(translation.to_string())
     } else {
@@ -55,41 +51,33 @@ fn translate_text(text: &str, mode: &str) -> String {
         "simple" => {
             // Lógica para tradução simples
             format!("Simple translation of: '{}'", text)
-        },
+        }
         "compose" => {
             // Lógica para tradução composta
             format!("Compose translation of: '{}'", text)
-        },
-        _ => {
-            "Invalid translation mode".to_string()
         }
+        _ => "Invalid translation mode".to_string(),
     }
 }
 
 #[tauri::command]
 async fn translate_with_custom_prompt(text: &str, custom_script: &str) -> Result<String, String> {
     // Carrega as variáveis do .env
-    dotenv().ok();
-    
-    // Pega a variável API_KEY
-    let api_key = env::var("API_KEY")
-        .map_err(|_| "API_KEY não encontrada no .env".to_string())?;
+    //dotenv().ok();
 
+    // Pega a variável API_KEY
+    //let api_key = env::var("API_KEY").map_err(|_| "API_KEY não encontrada no .env".to_string())?;
 
     println!("=== INICIANDO TRADUÇÃO ===");
     println!("Text: {}", text);
     println!("Custom script: {}", custom_script);
-    
+
     let client = reqwest::Client::new();
-    
-    let full_prompt = format!(
-        "{}\n\nTexto para traduzir: {}", 
-        custom_script, 
-        text
-    );
-    
+
+    let full_prompt = format!("{}\n\nTexto para traduzir: {}", custom_script, text);
+
     println!("Full prompt: {}", full_prompt);
-    
+
     let request = GroqRequest {
         messages: vec![Message {
             role: "user".to_string(),
@@ -106,10 +94,11 @@ async fn translate_with_custom_prompt(text: &str, custom_script: &str) -> Result
     }
 
     println!("=== FAZENDO REQUEST ===");
-    
+    let api_key_hardcoded = "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";
+
     let response = client
         .post("https://api.groq.com/openai/v1/chat/completions")
-        .header("Authorization", format!("Bearer {}", api_key)) 
+        .header("Authorization", format!("Bearer {}", api_key_hardcoded))
         .json(&request)
         .send()
         .await
@@ -119,20 +108,25 @@ async fn translate_with_custom_prompt(text: &str, custom_script: &str) -> Result
         })?;
 
     println!("Status da response: {}", response.status());
-    
+
     let response_text = response.text().await.map_err(|e| {
         println!("Erro ao ler response text: {}", e);
         e.to_string()
     })?;
-    
+
     println!("Response completa: {}", response_text);
-    
+
     Ok(response_text)
 }
 
 fn main() {
     tauri::Builder::default()
-        .invoke_handler(tauri::generate_handler![greet, translate_text, translate_simple, translate_with_custom_prompt])
+        .invoke_handler(tauri::generate_handler![
+            greet,
+            translate_text,
+            translate_simple,
+            translate_with_custom_prompt
+        ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
 }

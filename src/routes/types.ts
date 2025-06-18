@@ -1,4 +1,3 @@
 export interface TranslateOptions {
-  language: 'es' | 'en';
+	language: 'es' | 'en' | 'pt';
 }
-
